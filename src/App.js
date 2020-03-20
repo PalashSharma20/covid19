@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react"
 import { Map, CircleMarker, Popup, TileLayer } from "react-leaflet"
-import "./app.css"
+import "./App.css"
 
 const App = () => {
   const [stats, setStats] = useState(null)
