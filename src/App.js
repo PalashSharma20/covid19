@@ -88,16 +88,16 @@ const App = () => {
             stat.state
               .split(",")
               .some(keyword =>
-                keyword
+                debouncedSearchTerm
                   .toLowerCase()
-                  .includes(debouncedSearchTerm.toLowerCase())
+                  .includes(keyword.toLowerCase())
               ) ||
             stat.country
               .split(",")
               .some(keyword =>
-                keyword
+                debouncedSearchTerm
                   .toLowerCase()
-                  .includes(debouncedSearchTerm.toLowerCase())
+                  .includes(keyword.toLowerCase())
               )
         )
         .slice(0, 6)
