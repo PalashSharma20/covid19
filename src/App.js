@@ -4,11 +4,12 @@ import "./App.css"
 
 const App = () => {
   const [stats, setStats] = useState(null)
+  const [statCount, setStatCount] = useState(0)
   const [maxConfirmed, setMaxConfirmed] = useState(null)
 
   const [searchTerm, setSearchTerm] = useState("")
-  const [searchResults, setSearchResults] = useState(null)
   const debouncedSearchTerm = useDebounce(searchTerm, 500)
+  const [searchResults, setSearchResults] = useState(null)
 
   const mapRef = useRef(null)
 
@@ -19,15 +20,18 @@ const App = () => {
       .then(res => res.json())
       .then(files => {
         files = files
-          .filter(file => file.name.includes("csv"))
+          .filter(file => file.name.includes("global.csv"))
           .map(file => fetch(file.download_url))
+        setStatCount(files.length)
 
         Promise.all(files)
-          .then(async data => [
-            await data[0].text(),
-            await data[1].text(),
-            await data[2].text()
-          ])
+          .then(async data => {
+            let arr = [await data[0].text(), await data[1].text()]
+            if (data[2]) {
+              arr.push(await data[2].text())
+            }
+            return arr
+          })
           .then(data => {
             let types = ["confirmed", "deaths", "recovered"]
             let fetchedStats = {}
@@ -105,6 +109,7 @@ const App = () => {
     } else {
       setSearchResults(null)
     }
+    // eslint-disable-next-line
   }, [debouncedSearchTerm])
 
   const numberWithCommas = x =>
@@ -164,14 +169,16 @@ const App = () => {
                             )}
                           </td>
                         </tr>
-                        <tr>
-                          <td>Recovered</td>
-                          <td>
-                            {numberWithCommas(
-                              getDataFromDaysAgo(stat, "recovered")
-                            )}
-                          </td>
-                        </tr>
+                        {statCount === 3 && (
+                          <tr>
+                            <td>Recovered</td>
+                            <td>
+                              {numberWithCommas(
+                                getDataFromDaysAgo(stat, "recovered")
+                              )}
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -224,6 +231,7 @@ const useDebounce = (value, delay) => {
     return () => {
       clearTimeout(handler)
     }
+    // eslint-disable-next-line
   }, [value])
 
   return debouncedValue
