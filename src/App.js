@@ -4,7 +4,6 @@ import "./App.css"
 
 const App = () => {
   const [stats, setStats] = useState(null)
-  const [statCount, setStatCount] = useState(0)
   const [maxConfirmed, setMaxConfirmed] = useState(null)
 
   const [searchTerm, setSearchTerm] = useState("")
@@ -14,73 +13,66 @@ const App = () => {
   const mapRef = useRef(null)
 
   useEffect(() => {
-    fetch(
-      "https://api.github.com/repos/CSSEGISandData/COVID-19/contents/csse_covid_19_data/csse_covid_19_time_series?ref=master"
+    Promise.all(
+      [
+        "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv",
+        "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv",
+        "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv"
+      ].map(file => fetch(file))
     )
-      .then(res => res.json())
-      .then(files => {
-        files = files
-          .filter(file => file.name.includes("global.csv"))
-          .map(file => fetch(file.download_url))
-        setStatCount(files.length)
+      .then(data => Promise.all(data.map(d => d.text())))
+      .then(data => {
+        let types = ["confirmed", "deaths", "recovered"]
+        let fetchedStats = {}
 
-        Promise.all(files)
-          .then(async data => {
-            let arr = [await data[0].text(), await data[1].text()]
-            if (data[2]) {
-              arr.push(await data[2].text())
+        data.forEach((d, i) => {
+          d = d.split("\n")
+          d.shift()
+          d.forEach(stats => {
+            stats = stats.split(/,+(?![^"]*")/g)
+
+            let state = stats[0]
+
+            if (stats[0].startsWith(',"')) {
+              state = ""
+              stats.unshift("")
+              stats[1] = stats[1].substring(1).replace(/"/g, "")
             }
-            return arr
+
+            let country = stats[1]
+            let lat = stats[2]
+            let lng = stats[3]
+
+            let data = stats.slice(4)
+            data = data.map(stat => parseInt(stat))
+
+            if (!fetchedStats.hasOwnProperty(state + country)) {
+              fetchedStats[state + country] = {
+                state,
+                country,
+                lat,
+                lng
+              }
+            }
+
+            fetchedStats[state + country][types[i]] = data
           })
-          .then(data => {
-            let types = ["confirmed", "deaths", "recovered"]
-            let fetchedStats = {}
+        })
 
-            data.forEach((d, i) => {
-              d = d.split("\n")
-              d.shift()
-              d.forEach(stats => {
-                stats = stats.split(/,+(?![^"]*")/g)
+        fetchedStats = Object.values(fetchedStats)
+          .filter(
+            stat =>
+              stat.country !== undefined &&
+              getDataFromDaysAgo(stat, "confirmed") > 0
+          )
+          .sort(
+            (x, y) =>
+              getDataFromDaysAgo(y, "confirmed") -
+              getDataFromDaysAgo(x, "confirmed")
+          )
 
-                let state = stats[0]
-
-                if (stats[0].startsWith(',"')) {
-                  state = ""
-                  stats.unshift("")
-                  stats[1] = stats[1].substring(1).replace(/"/g, "")
-                }
-
-                let country = stats[1]
-                let lat = stats[2]
-                let lng = stats[3]
-
-                let data = stats.slice(4)
-                data = data.map(stat => parseInt(stat))
-
-                if (!fetchedStats.hasOwnProperty(state + country)) {
-                  fetchedStats[state + country] = {
-                    state,
-                    country,
-                    lat,
-                    lng
-                  }
-                }
-
-                fetchedStats[state + country][types[i]] = data
-              })
-            })
-
-            fetchedStats = Object.values(fetchedStats)
-              .filter(stat => getDataFromDaysAgo(stat, "confirmed") > 0)
-              .sort(
-                (x, y) =>
-                  getDataFromDaysAgo(y, "confirmed") -
-                  getDataFromDaysAgo(x, "confirmed")
-              )
-
-            setStats(fetchedStats)
-            setMaxConfirmed(getDataFromDaysAgo(fetchedStats[0], "confirmed"))
-          })
+        setStats(fetchedStats)
+        setMaxConfirmed(getDataFromDaysAgo(fetchedStats[0], "confirmed"))
       })
   }, [])
 
@@ -116,7 +108,7 @@ const App = () => {
     x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
 
   const getDataFromDaysAgo = (stat, type, daysAgo = 0) =>
-    stat[type][stat[type].length - 1 - daysAgo]
+    stat[type] ? stat[type][stat[type].length - 1 - daysAgo] : null
 
   return (
     <div className="wrapper">
@@ -135,9 +127,13 @@ const App = () => {
         {stats &&
           maxConfirmed &&
           stats.map((stat, i) => {
-            const radius =
-              (getDataFromDaysAgo(stat, "confirmed") / maxConfirmed) * 70
+            const confirmed = getDataFromDaysAgo(stat, "confirmed")
+            const deaths = getDataFromDaysAgo(stat, "deaths")
+            const recovered = getDataFromDaysAgo(stat, "recovered")
+
+            const radius = (confirmed / maxConfirmed) * 70
             const coords = [stat.lat, stat.lng]
+
             return (
               <CircleMarker
                 key={i}
@@ -153,30 +149,22 @@ const App = () => {
                     <h3>{stat.state || stat.country}</h3>
                     <table>
                       <tbody>
-                        <tr>
-                          <td>Infections</td>
-                          <td>
-                            {numberWithCommas(
-                              getDataFromDaysAgo(stat, "confirmed")
-                            )}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>Deaths</td>
-                          <td>
-                            {numberWithCommas(
-                              getDataFromDaysAgo(stat, "deaths")
-                            )}
-                          </td>
-                        </tr>
-                        {statCount === 3 && (
+                        {confirmed && (
+                          <tr>
+                            <td>Infections</td>
+                            <td>{numberWithCommas(confirmed)}</td>
+                          </tr>
+                        )}
+                        {deaths && (
+                          <tr>
+                            <td>Deaths</td>
+                            <td>{numberWithCommas(deaths)}</td>
+                          </tr>
+                        )}
+                        {recovered && (
                           <tr>
                             <td>Recovered</td>
-                            <td>
-                              {numberWithCommas(
-                                getDataFromDaysAgo(stat, "recovered")
-                              )}
-                            </td>
+                            <td>{numberWithCommas(recovered)}</td>
                           </tr>
                         )}
                       </tbody>
