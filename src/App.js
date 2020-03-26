@@ -149,19 +149,19 @@ const App = () => {
                     <h3>{stat.state || stat.country}</h3>
                     <table>
                       <tbody>
-                        {confirmed && (
+                        {confirmed != null && (
                           <tr>
                             <td>Infections</td>
                             <td>{numberWithCommas(confirmed)}</td>
                           </tr>
                         )}
-                        {deaths && (
+                        {deaths != null && (
                           <tr>
                             <td>Deaths</td>
                             <td>{numberWithCommas(deaths)}</td>
                           </tr>
                         )}
-                        {recovered && (
+                        {recovered != null && (
                           <tr>
                             <td>Recovered</td>
                             <td>{numberWithCommas(recovered)}</td>
