@@ -1,4 +1,4 @@
-# Covid-19 Tracker
+# (Covid-19 Tracker)[https://covid19.palashsharma.com/]
 
 I created this at the beginning of the pandemic and fetched data from the COVID-19 Data Repository by the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University to display the infection, recovery, and death rates in different countries.
 
