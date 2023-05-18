@@ -1,4 +1,10 @@
+# Covid-19 Tracker
+
+I created this at the beginning of the pandemic and fetched data from the COVID-19 Data Repository by the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University to display the infection, recovery, and death rates in different countries.
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+
+![alt text](https://github.com/PalashSharma20/covid19/blob/master/preview.png?raw=true)
 
 ## Available Scripts
 
